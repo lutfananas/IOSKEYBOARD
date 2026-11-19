@@ -6,31 +6,42 @@ import android.content.res.Configuration;
 /** iOS-like colour palettes. */
 final class KbTheme {
     final boolean dark;
-    final int bg, key, func, text, shadow, accent, accentText, shiftOn, shiftOnText,
-            divider, bubble, stripPress, altSel;
+    /** glass = tint drawn over the blurred app behind; solid = fallback when blur is unavailable */
+    final int glass, solid, key, keyPressed, funcPressed, text, rim, accent, accentText, shiftOn,
+            shiftOnText, divider, bubble, stripPress, altSel, pill, pillPressed, pillRim, pillText;
+    /** kept for the emoji panel */
+    final int bg, func;
 
     private KbTheme(boolean dark) {
         this.dark = dark;
         if (dark) {
-            bg = 0xFF2B2B2D;
-            key = 0xFF6C6C70;
-            func = 0xFF46464A;
+            glass = 0x8C1C1B1F;
+            solid = 0xF22A292E;
+            key = 0x40FFFFFF;
+            keyPressed = 0x80FFFFFF;
+            funcPressed = 0x33FFFFFF;
             text = 0xFFFFFFFF;
-            shadow = 0xFF1A1A1C;
+            rim = 0x1AFFFFFF;
             accent = 0xFF0A84FF;
             accentText = 0xFFFFFFFF;
-            shiftOn = 0xFFF2F2F7;
+            shiftOn = 0xF2FFFFFF;
             shiftOnText = 0xFF000000;
             divider = 0x40FFFFFF;
-            bubble = 0xFF6C6C70;
+            bubble = 0xFF77767C;
             stripPress = 0x26FFFFFF;
             altSel = 0xFF0A84FF;
+            pill = 0xF2454349;
+            pillPressed = 0xFF65636A;
+            pillRim = 0x24FFFFFF;
+            pillText = 0xFFFFFFFF;
         } else {
-            bg = 0xFFD1D4DA;
-            key = 0xFFFFFFFF;
-            func = 0xFFABB0BA;
+            glass = 0x99E9E9EE;
+            solid = 0xF5DADCE1;
+            key = 0xB3FFFFFF;
+            keyPressed = 0xFFFFFFFF;
+            funcPressed = 0x26000000;
             text = 0xFF000000;
-            shadow = 0xFF898A8E;
+            rim = 0x14000000;
             accent = 0xFF007AFF;
             accentText = 0xFFFFFFFF;
             shiftOn = 0xFFFFFFFF;
@@ -39,7 +50,13 @@ final class KbTheme {
             bubble = 0xFFFFFFFF;
             stripPress = 0x1F000000;
             altSel = 0xFF007AFF;
+            pill = 0xF2F7F7FA;
+            pillPressed = 0xFFDCDCE2;
+            pillRim = 0x1A000000;
+            pillText = 0xFF000000;
         }
+        bg = 0;
+        func = funcPressed;
     }
 
     private static final KbTheme LIGHT = new KbTheme(false), DARK = new KbTheme(true);

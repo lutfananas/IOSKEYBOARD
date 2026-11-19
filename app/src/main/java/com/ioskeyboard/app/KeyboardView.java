@@ -3,6 +3,7 @@ package com.ioskeyboard.app;
 import android.annotation.SuppressLint;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -62,6 +63,7 @@ public final class KeyboardView extends View {
     private final Paint stripText = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final Paint emojiText = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF tmp = new RectF();
     private final Rect bounds = new Rect();
     private final Path path = new Path();
@@ -135,6 +137,16 @@ public final class KeyboardView extends View {
         @Override
         public void run() {
             Ptr p = lpPtr;
+            if (p != null && p.active && p.strip == STRIP_EMOJI_COUNT) {
+                // hold the chevron: switch keyboard (replaces the globe key)
+                p.strip = -1;
+                p.committed = true;
+                stripPressed = -1;
+                ime.feedback(Feedback.KEY);
+                ime.showImePicker();
+                invalidate();
+                return;
+            }
             if (p == null || !p.active || p.key == null || p.committed) return;
             Key k = p.key;
             if (k.code == Key.SPACE) {
@@ -228,14 +240,14 @@ public final class KeyboardView extends View {
     }
 
     private static Key[] bottomRow(int mode, String label) {
-        return new Key[]{new Key(mode, label), new Key(Key.EMOJI, null),
-                new Key(Key.SPACE, "space"), new Key(Key.RETURN, "return")};
+        return new Key[]{new Key(mode, label), new Key(Key.SPACE, "space"), new Key(Key.RETURN, "Return")};
     }
 
     // ------------------------------------------------------------------ public api
 
     void setTheme(KbTheme t) {
         th = t;
+        rimPaint.setColor(t.rim);
         invalidate();
     }
 
@@ -315,12 +327,12 @@ public final class KeyboardView extends View {
             stripH = 38 * dp;
             rowPitch = 41 * dp * heightScale;
             vGap = 6 * dp * heightScale;
-            radius = 7 * dp;
+            radius = 9 * dp;
         } else {
             stripH = 46 * dp;
             rowPitch = 55 * dp * heightScale;
             vGap = 11 * dp * heightScale;
-            radius = 8.5f * dp;
+            radius = 11 * dp;
         }
         hGap = 6 * dp;
         side = 3.5f * dp;
@@ -346,6 +358,8 @@ public final class KeyboardView extends View {
         stripText.setTextSize(Math.min(stripH * 0.38f, 17 * dp));
         emojiText.setTextSize(stripH * 0.5f);
         stroke.setStrokeWidth(1.6f * dp);
+        rimPaint.setStyle(Paint.Style.STROKE);
+        rimPaint.setStrokeWidth(0.7f * dp);
 
         text.getTextBounds("x", 0, 1, bounds);
         lowerOff = bounds.height() / 2f;
@@ -400,15 +414,11 @@ public final class KeyboardView extends View {
                     x += kw + hGap;
                 }
             } else {
-                float ret = 2.5f * u + 1.5f * hGap;
-                float x = side;
-                row[0].rect.set(x, top, x + mod, bot);
-                x += mod + hGap;
-                row[1].rect.set(x, top, x + mod, bot);
-                x += mod + hGap;
-                float spaceR = side + total - ret - hGap;
-                row[2].rect.set(x, top, spaceR, bot);
-                row[3].rect.set(spaceR + hGap, top, side + total, bot);
+                // iOS 26: [123]  [      space      ]  [Return ⏎]
+                float edge = 2.5f * u + 1.5f * hGap;
+                row[0].rect.set(side, top, side + edge, bot);
+                row[1].rect.set(side + edge + hGap, top, side + total - edge - hGap, bot);
+                row[2].rect.set(side + total - edge, top, side + total, bot);
             }
             // touch zones: split gaps half-half, edges extend to the screen border
             for (int i = 0; i < n; i++) {
@@ -496,6 +506,11 @@ public final class KeyboardView extends View {
         if (y < stripH) {
             p.strip = stripCell(x);
             stripPressed = p.strip;
+            if (p.strip == STRIP_EMOJI_COUNT) {
+                lpPtr = p;
+                h.removeCallbacks(longPress);
+                h.postDelayed(longPress, LONG_PRESS_MS + 120);
+            }
             invalidate();
             return;
         }
@@ -731,7 +746,7 @@ public final class KeyboardView extends View {
     // ------------------------------------------------------------------ strip
 
     private int stripCount() {
-        return ime.suggestionCount() > 0 ? 3 : STRIP_EMOJI_COUNT + 1;
+        return STRIP_EMOJI_COUNT + 1;
     }
 
     private int stripCell(float x) {
@@ -741,10 +756,7 @@ public final class KeyboardView extends View {
     }
 
     private void onStripTap(int cell) {
-        if (ime.suggestionCount() > 0) {
-            ime.feedback(Feedback.KEY);
-            ime.onSuggestion(cell);
-        } else if (cell >= STRIP_EMOJI_COUNT) {
+        if (cell >= STRIP_EMOJI_COUNT) {
             ime.feedback(Feedback.KEY);
             ime.showEmoji(true);
         } else {
@@ -763,7 +775,7 @@ public final class KeyboardView extends View {
         final long now = SystemClock.uptimeMillis();
         boolean animating = false;
 
-        c.drawColor(th.bg);
+        // background (blurred glass) is painted by the window / root view
 
         float ct = (now - cursorChangeAt) / 150f;
         if (ct < 1f) animating = true;
@@ -796,39 +808,31 @@ public final class KeyboardView extends View {
     }
 
     private void drawKey(Canvas c, Key k, float press, int labelAlpha, float cursorAnim) {
-        int base, pressed, fg;
-        boolean func = k.isFunc();
-        if (k.code == Key.SHIFT && shift != SHIFT_OFF) {
-            base = th.shiftOn;
-            pressed = th.shiftOn;
-            fg = th.shiftOnText;
-        } else if (k.code == Key.RETURN && returnAccent) {
-            base = th.accent;
-            pressed = th.key;
-            fg = press > 0.5f ? th.text : th.accentText;
-        } else if (func) {
-            base = th.func;
-            pressed = th.key;
-            fg = th.text;
-        } else if (k.code == Key.SPACE) {
-            base = th.key;
-            pressed = th.func;
-            fg = th.text;
-        } else {
-            base = th.key;
-            // character keys show the bubble instead; without bubbles they flash
-            pressed = bubbles ? th.key : th.func;
-            fg = th.text;
-        }
-        int col = KbTheme.lerp(base, pressed, press);
-        if (cursorAnim > 0f) col = KbTheme.lerp(col, th.func, cursorAnim * 0.6f);
-
         RectF r = k.rect;
-        fill.setColor(th.shadow);
-        tmp.set(r.left, r.top + dp, r.right, r.bottom + dp);
-        c.drawRoundRect(tmp, radius, radius, fill);
-        fill.setColor(col);
-        c.drawRoundRect(r, radius, radius, fill);
+        int fg = th.text;
+        boolean bare = k.code == Key.SHIFT || k.code == Key.DELETE || k.code == Key.RETURN || k.isMode();
+        if (bare) {
+            // iOS 26: function keys have no plate, only a soft highlight while touched
+            if (k.code == Key.SHIFT && shift != SHIFT_OFF) {
+                fill.setColor(th.shiftOn);
+                c.drawRoundRect(r, radius, radius, fill);
+                fg = th.shiftOnText;
+            } else if (press > 0f) {
+                fill.setColor(th.funcPressed);
+                fill.setAlpha((int) (Color.alpha(th.funcPressed) * press));
+                c.drawRoundRect(r, radius, radius, fill);
+            }
+        } else {
+            int pressedCol = (k.code == Key.CHAR && bubbles) ? th.key : th.keyPressed;
+            int col = KbTheme.lerp(th.key, pressedCol, press);
+            if (cursorAnim > 0f) {
+                int a = (int) (Color.alpha(col) * (1f - 0.55f * cursorAnim));
+                col = (col & 0x00FFFFFF) | (a << 24);
+            }
+            fill.setColor(col);
+            c.drawRoundRect(r, radius, radius, fill);
+            c.drawRoundRect(r, radius, radius, rimPaint);
+        }
 
         if (labelAlpha <= 0) return;
         float cx = r.centerX(), cy = r.centerY();
@@ -851,11 +855,19 @@ public final class KeyboardView extends View {
             case Key.EMOJI:
                 drawSmiley(c, cx, cy, keyH * 0.46f, fg, labelAlpha);
                 break;
-            case Key.RETURN:
+            case Key.RETURN: {
                 funcText.setColor(fg);
                 funcText.setAlpha(labelAlpha);
-                c.drawText(returnLabel, cx, cy + funcOff, funcText);
+                boolean withIcon = "Return".equals(returnLabel);
+                float tw = funcText.measureText(returnLabel);
+                float is = funcText.getTextSize() * 0.62f;
+                float gap = 5 * dp;
+                float total = tw + (withIcon ? gap + is : 0);
+                float tx = cx - total / 2f + tw / 2f;
+                c.drawText(returnLabel, tx, cy + funcOff, funcText);
+                if (withIcon) drawReturnIcon(c, cx - total / 2f + tw + gap, cy, is, fg, labelAlpha);
                 break;
+            }
             default:
                 funcText.setColor(fg);
                 funcText.setAlpha(labelAlpha);
@@ -875,7 +887,7 @@ public final class KeyboardView extends View {
             tmp.set(l + 2 * dp, 5 * dp, l + cw - 2 * dp, stripH - 5 * dp);
             c.drawRoundRect(tmp, radius, radius, fill);
         }
-        if (ime.suggestionCount() > 0) {
+        if (false) {
             String[] s = ime.suggestionLabels();
             stripText.setColor(th.text);
             stripText.setAlpha(alpha);
@@ -1016,6 +1028,23 @@ public final class KeyboardView extends View {
             c.drawRect(cx - stem - dp * 0.8f, y, cx + stem + dp * 0.8f, y + s * 0.12f, fill);
         }
         fill.setAlpha(255);
+    }
+
+    private void drawReturnIcon(Canvas c, float l, float cy, float s, int color, int alpha) {
+        float r = l + s, y = cy + s * 0.32f, a = s * 0.3f;
+        icon.reset();
+        icon.moveTo(r, cy - s * 0.62f);
+        icon.lineTo(r, y);
+        icon.lineTo(l, y);
+        icon.moveTo(l + a, y - a);
+        icon.lineTo(l, y);
+        icon.lineTo(l + a, y + a);
+        stroke.setColor(color);
+        stroke.setAlpha(alpha);
+        float w = stroke.getStrokeWidth();
+        stroke.setStrokeWidth(1.4f * dp);
+        c.drawPath(icon, stroke);
+        stroke.setStrokeWidth(w);
     }
 
     private void drawDelete(Canvas c, float cx, float cy, float s, int color, int alpha) {

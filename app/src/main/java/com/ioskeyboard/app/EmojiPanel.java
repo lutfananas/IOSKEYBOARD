@@ -149,7 +149,7 @@ final class EmojiPanel extends LinearLayout {
 
     void applyTheme(KbTheme t) {
         th = t;
-        setBackgroundColor(t.bg);
+        setBackgroundColor(Color.TRANSPARENT);
         title.setTextColor(t.dark ? 0xFF98989F : 0xFF6C6C70);
         abc.setTextColor(t.text);
         del.setTextColor(t.text);

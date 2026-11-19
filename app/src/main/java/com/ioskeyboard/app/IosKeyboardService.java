@@ -1,6 +1,13 @@
 package com.ioskeyboard.app;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.ColorDrawable;
+import android.view.WindowManager;
+import android.view.inputmethod.CursorAnchorInfo;
+import java.util.function.Consumer;
 import android.inputmethodservice.InputMethodService;
 import android.os.Build;
 import android.os.SystemClock;
@@ -50,6 +57,11 @@ public final class IosKeyboardService extends InputMethodService {
 
     private String[] stripEmoji = DEFAULT_EMOJI;
 
+    private SuggestionBubbles bubbles;
+    private float anchorX = Float.NaN, anchorY = Float.NaN;
+    private boolean glassOn;
+    private Consumer<Boolean> blurListener;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -65,6 +77,8 @@ public final class IosKeyboardService extends InputMethodService {
         kv = new KeyboardView(this);
         emoji = new EmojiPanel(this);
         emoji.setVisibility(View.GONE);
+        if (bubbles != null) bubbles.hide();
+        bubbles = new SuggestionBubbles(this);
         root.addView(kv, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT));
         root.addView(emoji, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
@@ -88,8 +102,42 @@ public final class IosKeyboardService extends InputMethodService {
         return false; // iOS never switches to the extract-text UI
     }
 
+    /** Real-time blur of the app behind the keyboard (Android 12+ when the device allows it). */
+    private void setupGlass(Window w) {
+        glassOn = false;
+        if (w == null || Build.VERSION.SDK_INT < 31) return;
+        WindowManager wm = getSystemService(WindowManager.class);
+        if (wm == null) return;
+        if (blurListener == null) {
+            blurListener = enabled -> applyPrefs();
+            try {
+                wm.addCrossWindowBlurEnabledListener(getMainExecutor(), blurListener);
+            } catch (Throwable ignored) {
+            }
+        }
+        glassOn = wm.isCrossWindowBlurEnabled();
+        w.setFormat(PixelFormat.TRANSLUCENT);
+        w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        w.setBackgroundBlurRadius(glassOn ? Math.round(30 * getResources().getDisplayMetrics().density) : 0);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (blurListener != null && Build.VERSION.SDK_INT >= 31) {
+            WindowManager wm = getSystemService(WindowManager.class);
+            try {
+                if (wm != null) wm.removeCrossWindowBlurEnabledListener(blurListener);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (bubbles != null) bubbles.hide();
+        super.onDestroy();
+    }
+
     private void applyPrefs() {
         theme = KbTheme.of(this, prefs.theme());
+        Window win = getWindow() != null ? getWindow().getWindow() : null;
+        setupGlass(win);
         fb.haptic = prefs.haptic();
         fb.sound = prefs.sound();
         autoCapOn = prefs.autoCap();
@@ -99,11 +147,13 @@ public final class IosKeyboardService extends InputMethodService {
             kv.setHeightScale(prefs.height() / 100f);
             kv.setBubbles(prefs.bubble());
             emoji.applyTheme(theme);
-            root.setBackgroundColor(theme.bg);
+            root.setBackgroundColor(glassOn ? theme.glass : theme.solid);
+            bubbles.setTheme(theme);
         }
-        Window w = getWindow() != null ? getWindow().getWindow() : null;
+        Window w = win;
         if (w != null) {
-            w.setNavigationBarColor(theme.bg);
+            w.setNavigationBarColor(Color.TRANSPARENT);
+            if (Build.VERSION.SDK_INT >= 29) w.setNavigationBarContrastEnforced(false);
             if (Build.VERSION.SDK_INT >= 30) {
                 WindowInsetsController c = w.getInsetsController();
                 if (c != null) c.setSystemBarsAppearance(theme.dark ? 0
@@ -148,14 +198,54 @@ public final class IosKeyboardService extends InputMethodService {
         expectedPos = 0;
         for (int i = 0; i < expected.length; i++) expected[i] = -2;
         lastWasSpace = false;
+        anchorX = anchorY = Float.NaN;
+        InputConnection ic = getCurrentInputConnection();
+        if (ic != null && suggestOn) {
+            try {
+                ic.requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR
+                        | InputConnection.CURSOR_UPDATE_IMMEDIATE);
+            } catch (Throwable ignored) {
+            }
+        }
         resync();
         refresh();
+    }
+
+    @Override
+    public void onUpdateCursorAnchorInfo(CursorAnchorInfo ci) {
+        float x = ci.getInsertionMarkerHorizontal(), top = ci.getInsertionMarkerTop();
+        if (Float.isNaN(x) || Float.isNaN(top)) {
+            anchorX = anchorY = Float.NaN;
+        } else {
+            float[] pt = {x, top};
+            Matrix m = ci.getMatrix();
+            if (m != null) m.mapPoints(pt);
+            anchorX = pt[0];
+            anchorY = pt[1];
+        }
+        updateBubbles();
+    }
+
+    private void updateBubbles() {
+        if (bubbles == null || kv == null) return;
+        if (sugCount == 0 || kv.getVisibility() != View.VISIBLE || !isInputViewShown()) {
+            bubbles.hide();
+            return;
+        }
+        bubbles.show(kv, sugLabel, sugCount, anchorX, anchorY);
+    }
+
+    @Override
+    public void onWindowHidden() {
+        super.onWindowHidden();
+        if (bubbles != null) bubbles.hide();
     }
 
     @Override
     public void onFinishInputView(boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         if (kv != null) kv.cancelTouches();
+        if (bubbles != null) bubbles.hide();
         suggest.saveAsync();
     }
 
@@ -368,6 +458,7 @@ public final class IosKeyboardService extends InputMethodService {
             emoji.open();
             emoji.setVisibility(View.VISIBLE);
             kv.setVisibility(View.INVISIBLE);
+            bubbles.hide();
         } else {
             emoji.setVisibility(View.GONE);
             kv.setVisibility(View.VISIBLE);
@@ -394,6 +485,7 @@ public final class IosKeyboardService extends InputMethodService {
     private void refresh() {
         if (kv == null) return;
         updateSuggestions();
+        updateBubbles();
         kv.setAutoShift(shouldAutoCap());
         kv.invalidate();
     }
@@ -503,15 +595,15 @@ public final class IosKeyboardService extends InputMethodService {
     }
 
     private static String returnLabel(EditorInfo ei) {
-        if ((ei.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) return "return";
+        if ((ei.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) return "Return";
         switch (ei.imeOptions & EditorInfo.IME_MASK_ACTION) {
-            case EditorInfo.IME_ACTION_GO: return "go";
-            case EditorInfo.IME_ACTION_SEARCH: return "search";
-            case EditorInfo.IME_ACTION_SEND: return "send";
-            case EditorInfo.IME_ACTION_NEXT: return "next";
-            case EditorInfo.IME_ACTION_DONE: return "done";
-            case EditorInfo.IME_ACTION_PREVIOUS: return "prev";
-            default: return "return";
+            case EditorInfo.IME_ACTION_GO: return "Go";
+            case EditorInfo.IME_ACTION_SEARCH: return "Search";
+            case EditorInfo.IME_ACTION_SEND: return "Send";
+            case EditorInfo.IME_ACTION_NEXT: return "Next";
+            case EditorInfo.IME_ACTION_DONE: return "Done";
+            case EditorInfo.IME_ACTION_PREVIOUS: return "Prev";
+            default: return "Return";
         }
     }
 
