@@ -48,6 +48,7 @@ public final class KeyboardView extends View {
     // geometry
     private float stripH, rowPitch, vGap, hGap, side, radius, bottomPad, keyH;
     private float heightScale = 1f;
+    private float bottomDp = 14f;
     private int width;
 
     // return key
@@ -258,6 +259,13 @@ public final class KeyboardView extends View {
         }
     }
 
+    void setBottomPad(float d) {
+        if (d != bottomDp) {
+            bottomDp = d;
+            requestLayout();
+        }
+    }
+
     void setBubbles(boolean b) {
         bubbles = b;
     }
@@ -336,7 +344,7 @@ public final class KeyboardView extends View {
         }
         hGap = 6 * dp;
         side = 3.5f * dp;
-        bottomPad = 3 * dp;
+        bottomPad = (land ? Math.min(bottomDp, 8f) : bottomDp) * dp;
         keyH = rowPitch - vGap;
     }
 

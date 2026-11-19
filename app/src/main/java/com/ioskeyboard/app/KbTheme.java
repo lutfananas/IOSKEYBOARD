@@ -71,6 +71,11 @@ final class KbTheme {
         return dark ? DARK : LIGHT;
     }
 
+    static int withAlpha(int c, float a) {
+        int v = Math.round(Math.max(0f, Math.min(1f, a)) * 255);
+        return (c & 0x00FFFFFF) | (v << 24);
+    }
+
     static int lerp(int a, int b, float t) {
         if (t <= 0f) return a;
         if (t >= 1f) return b;

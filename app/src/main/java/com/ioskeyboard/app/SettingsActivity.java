@@ -18,7 +18,7 @@ import android.widget.TextView;
 
 public final class SettingsActivity extends Activity {
     private Prefs prefs;
-    private TextView stEnable, stSelect, heightLabel;
+    private TextView stEnable, stSelect;
     private Button btnSelect;
 
     @Override
@@ -31,7 +31,6 @@ public final class SettingsActivity extends Activity {
         stEnable = findViewById(R.id.stEnable);
         stSelect = findViewById(R.id.stSelect);
         btnSelect = findViewById(R.id.btnSelect);
-        heightLabel = findViewById(R.id.heightLabel);
 
         findViewById(R.id.btnEnable).setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
@@ -46,18 +45,12 @@ public final class SettingsActivity extends Activity {
         theme.setOnCheckedChangeListener((g, id) -> sp.edit().putInt(Prefs.THEME,
                 id == R.id.thLight ? 1 : id == R.id.thDark ? 2 : 0).apply());
 
-        SeekBar height = findViewById(R.id.height);
-        height.setProgress(prefs.height() - 80);
-        heightLabel.setText("Tinggi keyboard: " + prefs.height() + "%");
-        height.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
-                heightLabel.setText("Tinggi keyboard: " + (p + 80) + "%");
-                sp.edit().putInt(Prefs.HEIGHT, p + 80).apply();
-            }
-            @Override public void onStartTrackingTouch(SeekBar s) { }
-            @Override public void onStopTrackingTouch(SeekBar s) { }
-        });
+        slider(R.id.height, R.id.heightLabel, Prefs.HEIGHT + "2", 60, 130, prefs.height(),
+                "Tinggi keyboard / tombol: %d%%");
+        slider(R.id.bottom, R.id.bottomLabel, Prefs.BOTTOM, 0, 48, prefs.bottom(),
+                "Jarak spasi ke tepi bawah: %d dp");
+        slider(R.id.glass, R.id.glassLabel, Prefs.GLASS, 0, 100, prefs.glass(),
+                "Transparansi blur: %d%%");
 
         bind(R.id.swBubble, Prefs.BUBBLE, prefs.bubble());
         bind(R.id.swHaptic, Prefs.HAPTIC, prefs.haptic());
@@ -65,6 +58,23 @@ public final class SettingsActivity extends Activity {
         bind(R.id.swCaps, Prefs.AUTOCAP, prefs.autoCap());
         bind(R.id.swDot, Prefs.DOUBLE_SPACE, prefs.doubleSpace());
         bind(R.id.swSuggest, Prefs.SUGGEST, prefs.suggest());
+    }
+
+    private void slider(int seekId, int labelId, String key, int min, int max, int value, String fmt) {
+        SeekBar bar = findViewById(seekId);
+        TextView label = findViewById(labelId);
+        bar.setMax(max - min);
+        bar.setProgress(value - min);
+        label.setText(String.format(java.util.Locale.ROOT, fmt, value));
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                label.setText(String.format(java.util.Locale.ROOT, fmt, p + min));
+                if (fromUser) prefs.sp.edit().putInt(key, p + min).apply();
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) { }
+            @Override public void onStopTrackingTouch(SeekBar s) { }
+        });
     }
 
     private void bind(int id, String key, boolean value) {

@@ -69,7 +69,14 @@ public final class IosKeyboardService extends InputMethodService {
         fb = new Feedback(this);
         suggest = new Suggest(this);
         loadRecent();
+        prefs.sp.registerOnSharedPreferenceChangeListener(prefListener);
     }
+
+    /** settings apply instantly, even while the keyboard is open */
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener prefListener =
+            (sp, key) -> {
+                if (kv != null && !Prefs.RECENT.equals(key)) applyPrefs();
+            };
 
     @Override
     public View onCreateInputView() {
@@ -131,6 +138,7 @@ public final class IosKeyboardService extends InputMethodService {
             }
         }
         if (bubbles != null) bubbles.hide();
+        prefs.sp.unregisterOnSharedPreferenceChangeListener(prefListener);
         super.onDestroy();
     }
 
@@ -145,9 +153,13 @@ public final class IosKeyboardService extends InputMethodService {
         if (kv != null) {
             kv.setTheme(theme);
             kv.setHeightScale(prefs.height() / 100f);
+            kv.setBottomPad(prefs.bottom());
             kv.setBubbles(prefs.bubble());
             emoji.applyTheme(theme);
-            root.setBackgroundColor(glassOn ? theme.glass : theme.solid);
+            float t = prefs.glass() / 100f;
+            root.setBackgroundColor(glassOn
+                    ? KbTheme.withAlpha(theme.glass, 0.85f - 0.82f * t)
+                    : KbTheme.withAlpha(theme.solid, 0.97f - 0.4f * t));
             bubbles.setTheme(theme);
         }
         Window w = win;

@@ -85,8 +85,31 @@
                 android:id="@+id/height"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:max="40" />
+                android:layout_marginTop="6dp" />
+            <TextView
+                android:id="@+id/bottomLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+            <SeekBar
+                android:id="@+id/bottom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" />
+            <TextView
+                android:id="@+id/glassLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+            <SeekBar
+                android:id="@+id/glass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" />
             <Switch android:id="@+id/swBubble" style="@style/Sw" android:text="Pop-up huruf saat ditekan" />
         </LinearLayout>
 
@@ -105,7 +128,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:lineSpacingExtra="3dp"
-            android:text="Tips:\n• Tahan spasi lalu geser untuk memindahkan kursor.\n• Ketuk Shift dua kali untuk Caps Lock.\n• Tahan huruf (a, e, i, o, u…) untuk aksen.\n• Tekan 123 lalu geser ke angka untuk mengetik cepat.\n• Tahan tombol emoji untuk ganti keyboard."
+            android:text="Tips:\n• Tahan spasi lalu geser untuk memindahkan kursor.\n• Ketuk Shift dua kali untuk Caps Lock.\n• Tahan huruf (a, e, i, o, u…) untuk aksen.\n• Tekan 123 lalu geser ke angka untuk mengetik cepat.\n• Tahan tanda ⌄ di baris emoji untuk ganti keyboard.\n• Pengaturan langsung terlihat: ketuk kolom tes di atas sambil menggeser slider."
             android:textColor="@color/sub"
             android:textSize="14sp" />
     </LinearLayout>
