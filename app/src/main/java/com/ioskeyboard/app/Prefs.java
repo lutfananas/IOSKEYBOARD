@@ -1,0 +1,29 @@
+package com.ioskeyboard.app;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+final class Prefs {
+    static final String THEME = "theme", HAPTIC = "haptic", SOUND = "sound", AUTOCAP = "autocap",
+            DOUBLE_SPACE = "dblspace", SUGGEST = "suggest", HEIGHT = "height", RECENT = "emoji_recent",
+            BUBBLE = "bubble";
+
+    final SharedPreferences sp;
+
+    Prefs(Context c) {
+        sp = c.getSharedPreferences("settings", Context.MODE_PRIVATE);
+    }
+
+    int theme() { return sp.getInt(THEME, 0); }
+    boolean haptic() { return sp.getBoolean(HAPTIC, true); }
+    boolean sound() { return sp.getBoolean(SOUND, false); }
+    boolean autoCap() { return sp.getBoolean(AUTOCAP, true); }
+    boolean doubleSpace() { return sp.getBoolean(DOUBLE_SPACE, true); }
+    boolean suggest() { return sp.getBoolean(SUGGEST, true); }
+    boolean bubble() { return sp.getBoolean(BUBBLE, true); }
+    /** keyboard height in percent, 80..120 */
+    int height() { return sp.getInt(HEIGHT, 100); }
+
+    String recent() { return sp.getString(RECENT, ""); }
+    void setRecent(String s) { sp.edit().putString(RECENT, s).apply(); }
+}

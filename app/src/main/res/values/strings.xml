@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iOS Keyboard</string>
+    <string name="ime_name">iOS Keyboard</string>
+    <string name="subtype">English &amp; Indonesia</string>
+</resources>

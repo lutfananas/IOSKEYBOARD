@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="32dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="iOS Keyboard"
+            android:textColor="@color/text"
+            android:textSize="34sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Keyboard bergaya iPhone untuk Android"
+            android:textColor="@color/sub"
+            android:textSize="15sp" />
+
+        <TextView style="@style/Section" android:text="PASANG KEYBOARD" />
+
+        <LinearLayout style="@style/Card">
+            <Button
+                android:id="@+id/btnEnable"
+                style="@style/Btn"
+                android:text="1. Aktifkan iOS Keyboard" />
+            <TextView android:id="@+id/stEnable" style="@style/Status" />
+            <Button
+                android:id="@+id/btnSelect"
+                style="@style/Btn"
+                android:layout_marginTop="12dp"
+                android:text="2. Jadikan Keyboard Default" />
+            <TextView android:id="@+id/stSelect" style="@style/Status" />
+        </LinearLayout>
+
+        <TextView style="@style/Section" android:text="COBA KETIK" />
+
+        <EditText
+            android:id="@+id/test"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card"
+            android:hint="Ketik di sini untuk mencoba…"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minHeight="56dp"
+            android:padding="14dp"
+            android:textColor="@color/text"
+            android:textColorHint="@color/sub"
+            android:textSize="17sp" />
+
+        <TextView style="@style/Section" android:text="TAMPILAN" />
+
+        <LinearLayout style="@style/Card">
+            <RadioGroup
+                android:id="@+id/theme"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton android:id="@+id/thAuto" style="@style/Radio" android:text="Otomatis" />
+                <RadioButton android:id="@+id/thLight" style="@style/Radio" android:text="Terang" />
+                <RadioButton android:id="@+id/thDark" style="@style/Radio" android:text="Gelap" />
+            </RadioGroup>
+            <TextView
+                android:id="@+id/heightLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+            <SeekBar
+                android:id="@+id/height"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:max="40" />
+            <Switch android:id="@+id/swBubble" style="@style/Sw" android:text="Pop-up huruf saat ditekan" />
+        </LinearLayout>
+
+        <TextView style="@style/Section" android:text="PENGETIKAN" />
+
+        <LinearLayout style="@style/Card">
+            <Switch android:id="@+id/swHaptic" style="@style/Sw" android:text="Getaran (haptic)" />
+            <Switch android:id="@+id/swSound" style="@style/Sw" android:text="Suara klik" />
+            <Switch android:id="@+id/swCaps" style="@style/Sw" android:text="Huruf besar otomatis" />
+            <Switch android:id="@+id/swDot" style="@style/Sw" android:text="Spasi dua kali = titik" />
+            <Switch android:id="@+id/swSuggest" style="@style/Sw" android:text="Saran kata (prediktif)" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:lineSpacingExtra="3dp"
+            android:text="Tips:\n• Tahan spasi lalu geser untuk memindahkan kursor.\n• Ketuk Shift dua kali untuk Caps Lock.\n• Tahan huruf (a, e, i, o, u…) untuk aksen.\n• Tekan 123 lalu geser ke angka untuk mengetik cepat.\n• Tahan tombol emoji untuk ganti keyboard."
+            android:textColor="@color/sub"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>
